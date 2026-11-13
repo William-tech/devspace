@@ -12,6 +12,10 @@
   --a:#3fe0ff; --b:#ff5fc8; --c:#9dff6a; --glow:1;
   --px:"Press Start 2P",ui-monospace,monospace; --mono:"VT323",ui-monospace,Menlo,monospace;
 }
+[data-theme="forest"]{
+  --bg:#0c140e; --panel:rgba(20,36,24,.93); --line:#3f6a42; --txt:#f0f6e0; --dim:#9ab89a;
+  --a:#8dffb0; --b:#ff8ad0; --c:#c8ff7a; --glow:.7;
+}
 [data-theme="space"]{
   --bg:#04050c; --panel:rgba(10,16,30,.9); --line:#2a4a6a; --txt:#dff3ff; --dim:#7fa0b8;
   --a:#4de8ff; --b:#ff9a3d; --c:#7dffb0; --glow:1;
@@ -78,6 +82,11 @@ body.playing #hud{opacity:1}
 .dlg h2{font-family:var(--px);font-size:12px;margin:0 0 12px;color:var(--a);font-weight:400;text-shadow:0 0 calc(10px*var(--glow)) var(--a)}
 .dlg .row{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:12px}
 .dlg small{display:block;color:var(--dim);margin-top:10px;font-size:17px;line-height:1.15}
+#tarotCard{text-align:center;width:130px;margin:4px auto 14px;padding:16px 8px 12px;border:2px solid var(--a);background:color-mix(in srgb,var(--a) 10%,transparent);box-shadow:0 0 calc(18px*var(--glow)) color-mix(in srgb,var(--a) 45%,transparent),4px 4px 0 rgba(0,0,0,.25)}
+#tarotCard.flip{animation:pop .45s cubic-bezier(.2,1.4,.4,1)}
+#tarotIcon{font-size:46px;line-height:1.15}
+#tarotName{font-family:var(--px);font-size:9px;line-height:1.5;margin-top:10px;color:var(--a)}
+#tarotText{margin:0;text-align:center;line-height:1.15;min-height:2.3em}
 #game{display:block;width:100%;image-rendering:pixelated;border:2px solid var(--line);background:#05030f;touch-action:none}
 
 /* LOGIN */
@@ -144,6 +153,14 @@ body.playing #themeLogin{display:none}
     <small>ZQSD, flèches ou glisser · Entrée pour rejouer · Échap pour quitter</small>
   </div>
 </div>
+<div id="tarotDlg" class="overlay" hidden>
+  <div class="panel dlg">
+    <h2>LA CARTE DU JOUR</h2>
+    <div id="tarotCard"><div id="tarotIcon"></div><div id="tarotName"></div></div>
+    <p id="tarotText"></p>
+    <div class="row"><button class="btn" type="button" id="tarotAgain">Retirer une carte</button><button class="btn alt" type="button" id="tarotClose">Fermer</button></div>
+  </div>
+</div>
 <form id="boardDlg" class="overlay" hidden autocomplete="off">
   <div class="panel dlg">
     <h2>TABLEAU DE TICKETS</h2>
@@ -197,6 +214,11 @@ const PAL={
   rug:'#f1d9c9',rugB:'#f6e4d6',rugLine:'#d0568f',sofa:'#e0668c',sofaD:'#b04468',sofaL:'#f490ae',
   plant:'#4fc46a',plantD:'#2a8748',pot:'#c96a4a',sky:'#b4e6fa',sky2:'#8ed2f2',city:'#9fc7b0',chair:'#56607f',chairD:'#3c4560',white:'#ffffff',
   A:'#0a8fb0',B:'#c81e9e',C:'#3f8a0c',D:'#c98a00',lamp:'#ffb86a',shadow:'rgba(60,40,30,.2)',shaft:'rgba(255,250,220,.28)',glow:0,bubble:'#fffdf6',bubbleTxt:'#2a2540'},
+ forest:{void:'#0c140e',floorA:'#3f7a3c',floorB:'#3a7238',grout:'#2f6230',speck:'#5fa04c',wall:'#1f4a2c',wallD:'#15331f',trim:'#0f2616',out:'#16241a',
+  wood:'#b08050',woodL:'#d6aa74',woodD:'#7a5230',metal:'#5a4630',metalL:'#8a6e4a',screenOff:'#1a2a1e',screenOn:'#12301e',
+  rug:'#4a8a40',rugB:'#56994a',rugLine:'#ffe08a',sofa:'#7a5230',sofaD:'#553620',sofaL:'#9a7040',
+  plant:'#6fd36a',plantD:'#2f8a45',pot:'#7a5230',sky:'#fff0b0',sky2:'#c4e8a0',city:'#1f4a2c',chair:'#a87848',chairD:'#7a5230',white:'#f0e8c8',
+  A:'#8dffb0',B:'#ff8ad0',C:'#c8ff7a',D:'#ffd23d',lamp:'#d8ff8a',shadow:'rgba(5,20,8,.4)',shaft:'rgba(255,240,160,.09)',glow:1,bubble:'#16241a',bubbleTxt:'#f0f6e0',night:1,kind:'forest',sign:['FORET','.DEV']},
  // --- thèmes secrets ---
  space:{void:'#04050c',floorA:'#1a2233',floorB:'#172030',grout:'#0e1420',speck:'#2a3852',wall:'#2a3448',wallD:'#1b2333',trim:'#0e1420',out:'#0a0d18',
   wood:'#56627f',woodL:'#8d9abb',woodD:'#363f58',metal:'#2c3550',metalL:'#6f7da3',screenOff:'#0a0f1c',screenOn:'#06202a',
@@ -292,7 +314,22 @@ function deskDeco(d,i){
   ];
   items[i%7](a); items[(i*3+2)%7](b);
 }
+function logSeat(x,y,w){                                               // rondin : écorce + cernes sur le dessus
+  r(x-w+1,y+1,w*2,2,P.shadow); ob(x-w,y-8,w*2,8,P.woodD); r(x-w,y-8,w*2,5,P.woodL); r(x-w+1,y-7,w*2-2,3,P.wood); r(x-1,y-6,2,1,P.woodD);
+  r(x-w+1,y-2,1,2,P.sofaD); r(x+w-3,y-3,1,3,P.sofaD); r(x-1,y-2,1,2,P.sofaD) }
+function drawRoot(x,y,w,h,dir,i){                                       // banc de racines moussues
+  const hz=w>h; r(x+2,y+h+1,w,3,P.shadow);
+  for(const [a,b,c,d] of hz?[[-4,h-4,5,4],[w-1,2,5,4],[w-2,h-3,4,3],[-3,1,4,3]]:[[1,-4,4,5],[w-5,h-1,4,5],[-3,h-6,4,4],[w-1,5,4,4]]){ ob(x+a,y+b,c,d,P.sofa); r(x+a,y+b,c,1,P.sofaL) }
+  if(hz){ for(let k=5;k<w-6;k+=9){ ob(x+k,y-2,5,3,P.sofa); r(x+k,y-2,5,1,P.sofaL); ob(x+k+3,y+h-1,5,3,P.sofa) } }      // nœuds et renflements : contour irrégulier
+  else  { for(let k=5;k<h-6;k+=9){ ob(x-2,y+k,3,5,P.sofa); r(x-2,y+k,1,5,P.sofaL); ob(x+w-1,y+k+3,3,5,P.sofa) } }
+  ob(x,y,w,h,P.sofa);
+  if(hz){ r(x,dir==='down'?y:y+h-5,w,5,P.sofaD); r(x+3,dir==='down'?y+6:y+2,w-6,h-8,P.rugB); r(x+3,dir==='down'?y+6:y+2,w-6,1,P.speck);
+          for(let k=6;k<w-4;k+=9)r(x+k,dir==='down'?y+1:y+h-4,1,3,P.sofaL); r(x+w/2,dir==='down'?y+6:y+2,1,h-8,P.plantD); r(x+(i%2?w-9:6),dir==='down'?y+8:y+4,2,2,P.B); r(x+(i%2?10:w-12),dir==='down'?y+10:y+6,2,2,'#ffffff') }
+  else  { r(dir==='right'?x:x+w-5,y,5,h,P.sofaD); r(dir==='right'?x+6:x+2,y+3,w-8,h-6,P.rugB); r(dir==='right'?x+6:x+2,y+3,w-8,1,P.speck);
+          for(let k=6;k<h-4;k+=9)r(dir==='right'?x+1:x+w-4,y+k,3,1,P.sofaL); r(dir==='right'?x+6:x+2,y+h/2,w-8,1,P.plantD); r(dir==='right'?x+9:x+4,y+(i%2?h-10:7),2,2,P.B); r(dir==='right'?x+11:x+6,y+(i%2?9:h-12),2,2,'#ffffff') }
+}
 function officeChair(sx,sy,dir){
+  if(P.kind==='forest'){ logSeat(sx,sy,5); return }
   r(sx-5,sy+1,11,2,P.shadow);
   r(sx-6,sy,2,1,P.out); r(sx+4,sy,2,1,P.out); r(sx-1,sy+1,2,1,P.out);       // piètement étoile
   ob(sx-5,sy-8,10,8,P.chair); r(sx-5,sy-8,10,1,P.metalL);
@@ -304,13 +341,15 @@ function drawDesk(d,i){
   officeChair(d.sx,d.sy,d.dir);
   r(x+2,y+d.h+1,d.w,3,P.shadow); ob(x,y,d.w,d.h,P.wood); r(x,y,d.w,2,P.woodL); r(x,y+d.h-4,d.w,4,P.woodD);
   r(x+2,y+d.h-3,1,2,P.out); r(x+d.w-3,y+d.h-3,1,2,P.out);
-  if(d.dir==='down'){r(d.x-7,y+11,13,3,P.metal);r(d.x+9,y+11,2,3,P.white)}
-  if(d.dir==='up'){r(d.x-7,y+3,13,3,P.metal);r(d.x-11,y+3,2,3,P.white)}
-  if(d.dir==='right'){r(x+13,d.y-6,3,13,P.metal);r(x+13,d.y+9,3,2,P.white)}
-  if(d.dir==='left'){r(x+4,d.y-6,3,13,P.metal);r(x+4,d.y-10,3,2,P.white)}
+  const mg=P.kind==='forest', KB=mg?'#f0e8c8':P.metal, KS=mg?'#b08050':P.metal, MS=mg?P.A:P.white;   // en forêt : grimoire ouvert + cristal
+  if(d.dir==='down'){r(d.x-7,y+11,13,3,KB);r(d.x-1,y+11,1,3,KS);r(d.x+9,y+11,2,3,MS)}
+  if(d.dir==='up'){r(d.x-7,y+3,13,3,KB);r(d.x-1,y+3,1,3,KS);r(d.x-11,y+3,2,3,MS)}
+  if(d.dir==='right'){r(x+13,d.y-6,3,13,KB);r(x+13,d.y,3,1,KS);r(x+13,d.y+9,3,2,MS)}
+  if(d.dir==='left'){r(x+4,d.y-6,3,13,KB);r(x+4,d.y,3,1,KS);r(x+4,d.y-10,3,2,MS)}
   deskDeco(d,i);
 }
 function drawSofa([x,y,w,h,dir],i){
+  if(P.kind==='forest'){ drawRoot(x,y,w,h,dir,i); return }
   r(x+2,y+h+1,w,3,P.shadow); ob(x,y,w,h,P.sofa);
   const hz=w>h;
   if(hz){ r(x,dir==='down'?y:y+h-5,w,5,P.sofaD); r(x,y,4,h,P.sofaL); r(x+w-4,y,4,h,P.sofaL); r(x+w/2,dir==='down'?y+5:y,1,h-5,P.sofaD);
@@ -320,6 +359,12 @@ function drawSofa([x,y,w,h,dir],i){
 }
 function windowPane(wx){
   r(wx-2,38,52,3,P.out); ob(wx,9,48,29,P.sky); r(wx,25,48,13,P.sky2);
+  if(P.kind==='forest'){                                                 // trouée : lumière dorée, sapins au loin, lianes
+    const pine=(cx,h,c)=>{ for(let i=0;i<h;i++)r(cx-(i>>1),38-h+i,(i>>1)*2+1,1,c) };
+    r(wx+33,13,6,6,'#fffbe0'); r(wx+34,12,4,8,'#fffbe0'); pine(wx+6,16,'#3f8a52'); pine(wx+16,12,'#57a868'); pine(wx+27,18,'#3f8a52'); pine(wx+38,13,'#57a868'); pine(wx+45,17,'#3f8a52');
+    r(wx,36,48,2,'#57a868'); r(wx,9,48,2,P.woodD); r(wx,9,2,29,P.woodD); r(wx+46,9,2,29,P.woodD);
+    for(const [a,l] of [[5,7],[12,4],[21,9],[30,5],[41,8]]){ r(wx+a,11,1,l,P.plantD); r(wx+a-1,11+l,2,2,P.plant) }
+    return }
   if(P.kind==='space'){                                                  // champ d'étoiles + planètes
     for(let i=0;i<24;i++){ const h=hash('st'+wx+i); r(wx+1+h%46,13+(h>>6)%24,1,1,i%5?'#8fa4c8':'#ffffff') }
     if(wx<200){ r(wx+27,17,10,12,'#ff9a3d'); r(wx+26,19,12,8,'#ff9a3d'); r(wx+28,19,7,2,'#ffc27a'); r(wx+27,26,9,1,'#d9742a'); r(wx+21,23,22,1,'#ffe3b8'); r(wx+27,23,10,1,'#ffb766') }
@@ -334,7 +379,13 @@ function windowPane(wx){
   r(wx,9,48,4,P.white); r(wx,12,48,1,P.metalL); r(wx+23,13,2,25,P.out); r(wx,24,48,1,P.out);
 }
 function floor(){
-  if(P.kind==='fantasy'){                                                 // dalles de pierre décalées
+  if(P.kind==='forest'){                                                  // herbe, touffes, fleurs, chemin de terre depuis l'entrée
+    r(8,WALL,VW-16,VH-WALL-8,P.floorA);
+    for(let y=WALL;y<VH-8;y+=16)for(let x=8;x<VW-8;x+=16){ const h=hash('g'+x+'_'+y); if(h%3===0)r(x,y,16,16,P.floorB);
+      r(x+h%13,y+2+(h>>4)%11,1,2,P.grout); r(x+1+h%13,y+3+(h>>4)%11,1,1,P.grout); r(x+(h>>8)%14,y+1+(h>>12)%12,1,2,P.speck);
+      if(h%7===0){ const fx=x+3+(h>>5)%10, fy=y+3+(h>>9)%10; r(fx,fy,2,2,['#ffffff','#ffd23d','#ff8ad0'][h%3]); r(fx,fy+2,1,1,P.grout) } }
+    for(let y=250;y<VH-8;y+=4){ const h=hash('p'+y); r(231-h%3,y,18+h%3+(h>>3)%3,4,'#8a6a42'); r(233+(h>>5)%12,y+1,2,1,'#a5825a'); r(236+(h>>8)%10,y+3,1,1,'#6b4f30') }
+  } else if(P.kind==='fantasy'){                                                 // dalles de pierre décalées
     r(8,WALL,VW-16,VH-WALL-8,P.grout);
     for(let y=WALL,j=0;y<VH-8;y+=12,j++)for(let x=8-(j%2?12:0);x<VW-8;x+=24){ const h=hash('f'+x+'_'+y), x1=Math.max(x,8), w=Math.min(x+23,VW-8)-x1;
       if(w>0){ r(x1,y,w,11,h%3?P.floorA:P.floorB); if(w>6){ r(x1+2+(h>>4)%(w-4),y+2+(h>>8)%7,2,1,P.speck); r(x1+1+(h>>12)%(w-3),y+9,3,1,P.grout) } } }
@@ -348,6 +399,11 @@ function floor(){
   }
 }
 function wallPattern(){
+  if(P.kind==='forest'){
+    for(let x=8;x<VW-8;x+=6){ const h=hash('lf'+x); r(x,6+h%5,6,4+(h>>3)%5,P.plantD); if(h%3===0)r(x+1,12+(h>>5)%20,3,2,'#2a6338'); if(h%4===0)r(x+2,8+(h>>7)%26,2,2,P.plantD) }
+    for(const x of [92,134,338,372,468]){ r(x-1,6,12,WALL-9,P.out); r(x,6,10,WALL-9,P.woodD); r(x+2,6,2,WALL-9,P.wood); r(x+6,10,1,12,P.sofaD); r(x+4,26,1,9,P.sofaD); r(x-3,WALL-6,16,3,P.woodD); r(x-3,WALL-6,16,1,P.wood) }
+    for(let x=14;x<VW-10;x+=11){ const h=hash('vn'+x); if(h%3){ r(x,6,1,3+h%8,P.plant); r(x-1,8+h%8,2,2,P.plant) } }
+    return }
   if(P.kind==='fantasy'){ g.fillStyle=P.wallD; for(let y=6,j=0;y<WALL-4;y+=8,j++){ g.fillRect(8,y+7,VW-16,1); for(let x=8+(j%2?8:0);x<VW-8;x+=16)g.fillRect(x,y,1,7) } }
   else if(P.kind==='space'){ g.fillStyle=P.wallD; for(let x=56;x<VW-8;x+=48)g.fillRect(x,6,1,WALL-10); g.globalAlpha=.55; r(8,7,VW-16,1,P.A); g.globalAlpha=1; for(let x=20;x<VW-8;x+=48){r(x,WALL-7,2,1,P.B)} }
 }
@@ -358,7 +414,9 @@ function renderBG(){
   g.fillStyle=P.shaft; for(const wx of [150,282]){g.beginPath();g.moveTo(wx,WALL);g.lineTo(wx+48,WALL);g.lineTo(wx+78,150);g.lineTo(wx-30,150);g.fill()}
   // tapis du salon central
   r(138,100,204,148,P.out); r(136,102,208,144,P.out); r(139,101,202,146,P.rug); r(137,103,206,142,P.rug); r(143,107,194,134,P.rugB);
-  g.strokeStyle=P.rugLine; g.lineWidth=1; g.strokeRect(145.5,109.5,189,129);
+  if(P.kind==='forest'){ for(let k=0;k<44;k++){ const h=hash('fl'+k), side=k%4, tt=(k>>2)/11, fx=side<2?146+tt*188:(side===2?146:333), fy=side<2?(side?238:110):110+tt*128;
+      r(fx+h%3-1,fy+(h>>3)%3-1,2,2,['#ffffff','#ffe08a','#ff8ad0','#b9a0ff'][h%4]); r(fx+h%3-1,fy+(h>>3)%3+1,1,1,P.plantD) } }
+  else { g.strokeStyle=P.rugLine; g.lineWidth=1; g.strokeRect(145.5,109.5,189,129) }
   for(const [cx,cy] of [[168,118],[312,118],[168,230],[312,230],[240,146],[240,204]]){r(cx-1,cy-3,2,6,P.rugLine);r(cx-3,cy-1,6,2,P.rugLine);r(cx-1,cy-1,2,2,P.rug)}
   // murs
   r(0,0,VW,WALL,P.wall); wallPattern(); r(0,0,VW,6,P.wallD); r(0,WALL-3,VW,3,P.trim); r(0,WALL-4,VW,1,P.wallD);
@@ -366,13 +424,16 @@ function renderBG(){
   r(224,VH-9,32,9,P.floorB); ob(228,VH-15,24,6,P.metal); r(230,VH-13,20,1,P.A); // porte + paillasson
   windowPane(150); windowPane(282);
   // écran mural (dashboard) — ou carte au trésor sur parchemin
-  if(P.kind==='fantasy'){ ob(14,10,40,22,'#e2cf9c'); r(14,10,40,2,'#c9b27a'); r(14,30,40,2,'#c9b27a');
+  if(P.kind==='forest'){ ob(14,10,40,22,P.woodD); r(14,10,40,2,P.wood); r(15,20,38,1,P.sofaD);
+    bmp(18,13,['#.#..##..#...#.#..###','###..#..###..#....#.#','#.#.##..#.#.###...###'],P.A); bmp(18,23,['##..#.#.###..#..#.#','#...###..#..#.#.###','##..#.#..#...#..#.#'],P.C); r(46,24,4,4,P.B); r(47,25,2,2,'#ffffff') }
+  else if(P.kind==='fantasy'){ ob(14,10,40,22,'#e2cf9c'); r(14,10,40,2,'#c9b27a'); r(14,30,40,2,'#c9b27a');
     [[18,26],[21,25],[24,23],[27,24],[30,22],[33,20],[36,19],[39,17],[42,16]].forEach(([a,b])=>r(a,b,2,1,'#7d4c22')); r(45,13,1,3,'#b3261e'); r(44,14,3,1,'#b3261e');
     r(19,15,3,1,'#5f8f4a'); r(20,14,1,1,'#5f8f4a'); r(27,16,4,1,'#5f8f4a'); r(28,15,2,1,'#5f8f4a'); r(47,25,4,3,'#6f9fd0') }
   else { ob(14,10,40,22,P.screenOn); for(let k=0;k<4;k++)r(16,13+k*5,36,1,'#1d4a44'); for(let k=0;k<5;k++)r(18+k*8,11,1,20,'#1d4a44');
     [[18,24],[22,21],[26,22],[30,17],[34,19],[38,14],[42,16],[46,12]].forEach(([a,b])=>r(a,b,3,2,P.C)); r(33,32,2,2,P.out) }
   // cadre : robot maison, fusée ou blason selon le thème
-  if(P.kind==='space'){ ob(62,10,20,24,'#0b1030'); bmp(67,12,['....##....','...####...','...####...','..##..##..','..##..##..','..######..','..######..','.########.','##.####.##','#..####..#'],P.white); r(71,15,2,2,P.A); r(70,22,4,2,P.B); r(71,24,2,2,P.D); r(66,29,12,1,P.A); r(69,31,6,1,P.A) }
+  if(P.kind==='forest'){ ob(62,10,20,24,P.woodD); r(64,12,16,20,'#f0e8c8'); bmp(67,14,['......###.','....#####.','...######.','..######..','.######...','.#####....','.####.....','#.##......','#.........'],'#3f9a52'); r(68,21,5,1,'#2a6338'); r(66,28,12,1,P.woodD); r(68,30,8,1,P.woodD) }
+  else if(P.kind==='space'){ ob(62,10,20,24,'#0b1030'); bmp(67,12,['....##....','...####...','...####...','..##..##..','..##..##..','..######..','..######..','.########.','##.####.##','#..####..#'],P.white); r(71,15,2,2,P.A); r(70,22,4,2,P.B); r(71,24,2,2,P.D); r(66,29,12,1,P.A); r(69,31,6,1,P.A) }
   else if(P.kind==='fantasy'){ ob(62,10,20,24,'#5a1a1a'); bmp(67,13,['##########','#........#','#.#.##.#.#','#.######.#','#..####..#','#..#..#..#','.#.#..#.#.','.#.####.#.','..#....#..','...####...'],P.A); r(66,27,12,1,P.A); r(68,29,8,1,P.A) }
   else { ob(62,10,20,24,P.night?'#2a1a4a':'#fde9f7');
     bmp(67,14,['..######..','.########.','##.####.##','##########','###....###','.########.','..#....#..','.##....##.'],P.C); r(66,26,12,1,P.B); r(68,28,8,1,P.B); r(71,11,2,3,P.C) }
@@ -383,35 +444,46 @@ function renderBG(){
   r(430,30,36,2,P.out); r(462,22,4,8,P.plant); r(461,26,6,4,P.pot);
   // baies serveur
   for(const sx of [14,31]){ r(sx+2,72,15,3,P.shadow); ob(sx,48,15,24,P.metal); r(sx,48,15,1,P.metalL); for(let k=0;k<5;k++)r(sx+2,51+k*4,11,2,P.screenOff) }
+  if(P.kind==='forest')for(const sx of [14,31]){ ob(sx,48,15,24,P.woodD); r(sx,48,15,5,P.woodL); r(sx+2,49,11,3,P.wood); r(sx+5,50,5,1,P.woodD); r(sx+7,50,1,1,P.woodL);
+    r(sx+3,56,1,14,P.sofaD); r(sx+8,58,1,12,P.sofaD); r(sx+12,55,1,13,P.sofaD); r(sx,70,15,2,P.plantD); r(sx+1,69,3,1,P.plant); r(sx+10,69,4,1,P.plant) }   // souches (les lueurs clignotent dessus)
   // coin café
   r(430,61,40,3,P.shadow); ob(428,48,40,13,P.wood); r(428,48,40,2,P.woodL); r(428,57,40,4,P.woodD);
   ob(431,49,10,8,P.metal); r(433,51,6,3,'#111'); r(435,55,3,2,P.white); r(445,51,4,4,P.white); r(451,51,4,4,P.D); ob(459,50,6,6,P.metalL); r(460,51,4,2,P.A);
   // borne d'arcade
   r(15,304,22,3,P.shadow); ob(13,272,22,32,P.night?'#4a2a8a':'#7a4fd0'); r(13,272,22,3,P.B); r(15,277,18,12,'#000'); r(13,291,22,5,P.metal);
   r(17,292,2,3,'#ff4d6d'); r(24,293,2,2,P.D); r(28,293,2,2,P.A); r(13,297,22,7,P.night?'#33206a':'#5a37a8');
+  if(P.kind==='forest'){ ob(13,272,22,32,'#5a3a8a'); r(13,272,22,1,P.D); r(13,303,22,1,P.D); r(13,272,1,32,P.D); r(34,272,1,32,P.D); r(14,297,20,6,'#46297a');   // table de tarot : nappe, cartes, boule de cristal, bougie
+    for(const [cx,cy,c] of [[16,277,P.B],[22,276,P.D],[28,277,P.A]]){ ob(cx,cy,4,6,'#f6efd8'); r(cx+1,cy+1,2,4,c) } r(23,278,2,2,'#ffffff');
+    ob(21,287,6,6,'#9fd8ff'); r(22,288,2,2,'#ffffff'); r(20,293,8,2,P.woodD); ob(30,289,2,5,'#fff3d0') }
   // bibliothèque
   r(432,306,38,3,P.shadow); ob(430,292,38,14,P.woodD); r(431,293,36,12,P.screenOff);
   [P.A,P.B,P.D,P.C,P.white,P.B,P.A,'#ff8a4d',P.C,P.D,P.white,P.B].forEach((c,k)=>r(432+k*3,294+(k%3===1?2:0),2,10-(k%3===1?2:0),c));
   // plantes, poufs
   plant(12,100);plant(454,100,1);plant(69,294,1);plant(397,294);plant(327,104);plant(139,236,1);
   [[52,238,P.B],[392,236,P.A]].forEach(([x,y,c])=>{
+    if(P.kind==='forest'){ r(x+1,y+12,14,2,P.shadow); ob(x+4,y+6,6,7,'#f0e8c8'); r(x+8,y+7,2,6,'#d6cba0'); ob(x,y,14,7,c); r(x+1,y-1,12,1,P.out); r(x+2,y,10,1,c); r(x+2,y+1,3,2,'#ffffff'); r(x+8,y+2,2,2,'#ffffff'); r(x+11,y+4,2,1,'#ffffff'); return }   // champignon géant
     if(P.kind==='fantasy'){ r(x+1,y+12,14,2,P.shadow); ob(x,y+1,14,11,P.woodD); r(x,y+1,14,4,P.wood); r(x,y+5,14,1,P.out); r(x+2,y+1,1,11,P.metalL); r(x+11,y+1,1,11,P.metalL); r(x+6,y+4,2,3,P.D); return }   // coffre
     if(P.kind==='space'){ r(x+1,y+12,14,2,P.shadow); ob(x,y,14,12,P.metal); r(x,y,14,2,P.metalL); r(x+2,y+5,10,1,c); r(x+2,y+8,3,2,P.screenOff); r(x+11,y+8,1,2,P.C); return }                              // caisse
     r(x+1,y+12,14,2,P.shadow);r(x,y-1,14,14,P.out);r(x-1,y+1,16,10,P.out);r(x+1,y,12,12,c);r(x,y+2,14,8,c);g.globalAlpha=.3;r(x+3,y+2,5,3,'#fff');g.globalAlpha=1});
   // guéridons + lampes
   for(const [x,y] of LAMPS){
+    if(P.kind==='forest'){ r(x+1,y+10,10,2,P.shadow); logSeat(x+5,y+10,5); ob(x+2,y-5,6,7,'#dff6e8'); r(x+2,y-6,6,1,P.out); r(x+3,y-6,4,1,P.woodD); r(x+3,y-3,1,1,P.lamp); r(x+6,y-1,1,1,P.lamp); r(x+4,y,1,1,P.lamp); continue }   // bocal à lucioles sur une souche
     if(P.kind==='fantasy'){ r(x+1,y+10,10,2,P.shadow); ob(x+3,y+2,4,8,P.metal); ob(x,y-1,10,4,P.metalL); r(x,y-1,10,1,P.white); r(x+2,y-3,6,2,'#ff9a3d'); continue }      // brasero
     if(P.kind==='space'){ r(x+1,y+10,10,2,P.shadow); ob(x+1,y+6,8,4,P.metal); ob(x+3,y-7,4,13,P.metalL); r(x+4,y-6,2,10,P.lamp); r(x+4,y-6,1,3,'#ffffff'); continue }            // balise lumineuse
     r(x+1,y+10,10,2,P.shadow); ob(x,y,10,10,P.woodD); r(x,y,10,2,P.wood); r(x+4,y+1,2,4,P.out); ob(x+2,y-5,6,5,P.lamp); r(x+3,y-5,4,1,'#fff3d0') }
   // canapés
   SOFAS.forEach(drawSofa);
   // espace réunion ouvert : tabourets + grande table
-  SEATS.forEach(s=>{ if(s.kind==='meet'){ r(s.x-4,s.y+1,9,2,P.shadow); ob(s.x-4,s.y-7,8,7,P.chair); r(s.x-4,s.y-7,8,2,P.metalL) } });
+  SEATS.forEach(s=>{ if(s.kind==='meet'){ if(P.kind==='forest'){ logSeat(s.x,s.y,4); return } r(s.x-4,s.y+1,9,2,P.shadow); ob(s.x-4,s.y-7,8,7,P.chair); r(s.x-4,s.y-7,8,2,P.metalL) } });
   const [tx,ty,tw,th]=TABLE; r(tx+2,ty+th+1,tw,3,P.shadow); r(tx+1,ty-1,tw-2,th+2,P.out); r(tx-1,ty+1,tw+2,th-2,P.out);
   r(tx+1,ty,tw-2,th,P.wood); r(tx,ty+1,tw,th-2,P.wood); r(tx+1,ty,tw-2,2,P.woodL); r(tx+1,ty+th-4,tw-2,4,P.woodD);
   ob(tx+7,ty+4,9,6,P.metalL); r(tx+8,ty+5,7,3,P.A); ob(tx+38,ty+9,9,6,P.metalL); r(tx+39,ty+11,7,3,P.C);
   r(tx+21,ty+4,6,7,P.white); r(tx+22,ty+6,4,1,P.metalL); r(tx+22,ty+8,3,1,P.metalL); r(tx+31,ty+3,4,4,P.white); r(tx+32,ty+4,2,2,'#6b3f1d');
   ob(tx+33,ty+12,6,4,P.metal); r(tx+18,ty+13,3,3,P.D); ob(tx+56,ty+4,9,6,P.metalL); r(tx+57,ty+5,7,3,P.B); r(tx+50,ty+13,4,4,P.white); r(tx+51,ty+14,2,2,'#6b3f1d');
+  if(P.kind==='forest'){ r(tx+1,ty+2,tw-2,th-6,P.wood); r(tx,ty+3,tw,th-8,P.wood);                                       // table en bois brut : veines, nœuds, grimoire, cristaux
+    for(const [a,b,l] of [[4,5,22],[30,4,18],[52,6,14],[8,9,30],[42,10,22],[5,13,16],[26,14,26]])r(tx+a,ty+b,l,1,P.woodD); r(tx+24,ty+7,3,2,P.woodD); r(tx+58,ty+11,2,2,P.woodD); r(tx-2,ty+6,2,5,P.woodD); r(tx+tw,ty+9,2,6,P.woodD);
+    ob(tx+7,ty+5,11,6,'#f0e8c8'); r(tx+12,ty+5,1,6,P.woodD); r(tx+8,ty+7,3,1,P.metalL); r(tx+14,ty+7,3,1,P.metalL); r(tx+8,ty+9,3,1,P.metalL);
+    ob(tx+33,ty+10,6,6,P.A); r(tx+34,ty+11,2,2,'#ffffff'); ob(tx+50,ty+5,4,7,P.B); r(tx+51,ty+6,1,2,'#ffffff'); ob(tx+60,ty+10,2,5,'#fff3d0'); r(tx+43,ty+5,3,3,'#e2574a'); r(tx+44,ty+8,1,2,'#f0e8c8'); }
   // bureaux
   DESKS.forEach(drawDesk);
 }
@@ -430,7 +502,18 @@ const snap=v=>Math.round(v*S)/S;
 function glow(c,b){ if(P.glow){ctx.shadowColor=c;ctx.shadowBlur=b*S} }
 function noGlow(){ctx.shadowBlur=0;ctx.shadowColor='transparent'}
 function pool(x,y,rad,c,a){ if(!P.glow)return; const gr=ctx.createRadialGradient(x,y,0,x,y,rad); gr.addColorStop(0,c); gr.addColorStop(1,'transparent'); ctx.globalAlpha=a; ctx.fillStyle=gr; ctx.fillRect(x-rad,y-rad,rad*2,rad*2); ctx.globalAlpha=1 }
+function magicOrb(d,i,owner){                                           // en forêt, l'écran est un orbe : il s'illumine à la couleur de son occupant
+  const on=!!owner, c=on?COLORS[owner.c]:'#6f8f86', t=now/1000, cx=d.dir==='right'?d.x-5:d.dir==='left'?d.x+5:d.x, cy0=d.dir==='down'?d.y-12:d.dir==='up'?d.y+1:d.y-4;
+  const cy=cy0+(on?Math.round(Math.sin(t*2.4+i)*1.2):0);
+  R(cx-3,cy0+7,6,2,P.out); R(cx-2,cy0+7,4,1,P.woodD);
+  if(on)pool(cx,cy,34,c,.3);
+  R(cx-3,cy-5,6,10,P.out); R(cx-5,cy-3,10,6,P.out); R(cx-4,cy-4,8,8,P.out);
+  R(cx-3,cy-4,6,8,c); R(cx-4,cy-3,8,6,c); ctx.globalAlpha=.55; R(cx-3,cy-3,3,2,'#ffffff'); ctx.globalAlpha=.25; R(cx-1,cy+1,4,2,'#000'); ctx.globalAlpha=1;
+  if(on){ for(let k=0;k<4;k++){ const a=t*1.8+k*1.57+i; R(Math.round(cx+Math.cos(a)*8),Math.round(cy+Math.sin(a)*5),1,1,k%2?'#ffffff':c) }
+    const sc=Math.floor(t*4+i*3); ctx.globalAlpha=.8; for(let k=0;k<3;k++){ const h=hash('r'+(sc+k)+i); R(cx-6+h%3,cy-13+k*2,3+h%8,1,k%2?'#ffffff':c) } ctx.globalAlpha=1 }   // runes qui défilent
+}
 function monitor(d,i,owner){
+  if(P.kind==='forest'){ magicOrb(d,i,owner); return }
   const on=!!owner, c=on?COLORS[owner.c]:P.A, t=now/1000;
   if(on)pool(d.x,d.y,40,c,.22);
   if(d.dir==='down'){
@@ -610,16 +693,18 @@ function draw(){
   R(431,15,29,15,P.out); R(432,16,27,13,P.screenOff); ctx.font='10px "VT323",monospace'; glow(P.C,4); ctx.fillStyle='#9dff6a';
   ctx.fillText(hh+(dt.getSeconds()%2?':':' ')+mm,445.5,26); noGlow();
   // écran mural : point qui pulse
-  if(P.kind!=='fantasy'){ if(Math.floor(t*2)%2)R(46,12,3,2,P.D); R(16+Math.floor(t*6)%36,30,2,1,P.A) }
+  if(P.kind!=='fantasy'&&P.kind!=='forest'){ if(Math.floor(t*2)%2)R(46,12,3,2,P.D); R(16+Math.floor(t*6)%36,30,2,1,P.A) }
   if(P.kind==='space')for(let i=0;i<10;i++){ const h=hash('tw'+i), wx=i%2?150:282; if(Math.sin(t*2.2+i*1.7)>.55)R(wx+2+h%44,13+(h>>6)%4,1,1,'#ffffff') }   // étoiles qui scintillent
   // LEDs serveurs
   for(let k=0;k<10;k++){const sx=k<5?16:33, hv=hash('s'+k+Math.floor(t*(2+k%3))); R(sx+(hv%4)*2,51+(k%5)*4,1,1,hv%5?'#9dff6a':P.B); R(sx+9,51+(k%5)*4,1,1,hv%7?P.A:P.D)}
   pool(30,62,28,P.C,.12);
-  // borne d'arcade : petit jeu qui tourne
-  R(15,277,18,12,'#05030f'); const bx=15+Math.abs((t*14)%32-16), by=277+Math.abs((t*9)%20-10);
-  R(Math.round(bx),Math.round(by),2,2,P.D); R(16+Math.round(Math.abs((t*10)%26-13)),287,4,1,P.A);
-  for(let k=0;k<5;k++)if((Math.floor(t/3)+k)%4)R(16+k*3,278,2,1,[P.B,P.C,P.A][k%3]);
-  pool(24,296,32,P.B,.14);
+  // borne d'arcade : petit jeu qui tourne (en forêt : boule de cristal et bougie de la table de tarot)
+  if(P.kind==='forest'){ const pu=Math.sin(t*2.5); pool(24,290,24,'#9fd8ff',.22+pu*.06); R(23+Math.round(pu),289,1,1,'#ffffff'); R(22,290+Math.round(pu),1,1,P.B);
+    const f=Math.floor(t*9)%3; R(30,287-(f%2),2,2+(f%2),'#ffb84d'); R(30,288,1,1,'#fff3d0'); pool(31,288,14,'#ffb84d',.2) }
+  else { R(15,277,18,12,'#05030f'); const bx=15+Math.abs((t*14)%32-16), by=277+Math.abs((t*9)%20-10);
+    R(Math.round(bx),Math.round(by),2,2,P.D); R(16+Math.round(Math.abs((t*10)%26-13)),287,4,1,P.A);
+    for(let k=0;k<5;k++)if((Math.floor(t/3)+k)%4)R(16+k*3,278,2,1,[P.B,P.C,P.A][k%3]);
+    pool(24,296,32,P.B,.14) }
   // lampes du salon + haut-parleur de réunion
   for(const [lx,ly] of LAMPS){ pool(lx+5,ly,46,P.lamp,.24+Math.sin(t*(P.kind==='fantasy'?9:2)+lx)*(P.kind==='fantasy'?.05:.015));
     if(P.kind==='fantasy'){ const f=Math.floor(t*8+lx)%3; R(lx+3,ly-5-f,4,3+f,'#ff9a3d'); R(lx+4,ly-4-(f%2),2,2+(f%2),'#ffe08a'); R(lx+2+f,ly-7-f,1,1,'#ffcf4d') } }   // flammes
@@ -628,7 +713,12 @@ function draw(){
   DESKS.forEach((d,i)=>monitor(d,i,seatOwner(i)));
   // robot aspirateur (ou chat de la guilde)
   const rx=snap(roomba.x), ry=snap(roomba.y);
-  if(P.kind==='fantasy'){ const dir=Math.cos(roomba.a)<0?-1:1, st=roomba.spin>0?0:Math.floor(t*6)%2, K='#1c1522', hx=dir>0?rx+3:rx-7;
+  if(P.kind==='forest'){ const hv=Math.round(Math.sin(t*5)*1.5), fy=ry-9+hv, flap=Math.floor(t*14)%2, dir=Math.cos(roomba.a)<0?-1:1;          // petite fée en robe de pétales
+    ctx.globalAlpha=.22; R(rx-3,ry,6,2,'#000'); ctx.globalAlpha=1; pool(rx,fy,14,'#fff6c0',.3);
+    for(let k=1;k<5;k++){ const h=hash('sp'+k+Math.floor(t*6)); ctx.globalAlpha=.9-k*.2; R(rx-dir*(k*3)+h%3-1,fy+1+(h>>3)%4-1,1,1,k%2?'#fff6c0':'#ff8ad0') } ctx.globalAlpha=.75;
+    R(rx-4,fy-2-flap,3,3+flap,'#eaffff'); R(rx+1,fy-2-flap,3,3+flap,'#eaffff'); R(rx-3,fy+1,2,2,'#c8f6ff'); R(rx+1,fy+1,2,2,'#c8f6ff'); ctx.globalAlpha=1;
+    R(rx-1,fy-4,2,2,'#ffe0c2'); R(rx-1,fy-5,2,1,'#5a3a22'); R(rx-dir,fy-4,1,1,'#5a3a22'); R(rx-1,fy-2,2,2,'#b9a0ff'); R(rx-2,fy,4,2,'#b9a0ff'); R(rx-1,fy+2,1,1,'#ffe0c2'); R(rx,fy+2,1,1,'#ffe0c2') }
+  else if(P.kind==='fantasy'){ const dir=Math.cos(roomba.a)<0?-1:1, st=roomba.spin>0?0:Math.floor(t*6)%2, K='#1c1522', hx=dir>0?rx+3:rx-7;
     ctx.globalAlpha=.3; R(rx-5,ry+1,10,2,'#000'); ctx.globalAlpha=1;
     R(rx-4,ry-4,8,4,K); R(rx-4+st,ry,1,2,K); R(rx-2-st,ry,1,2,K); R(rx+1+st,ry,1,2,K); R(rx+3-st,ry,1,2,K);
     R(hx,ry-7,4,4,K); R(hx,ry-8,1,1,K); R(hx+3,ry-8,1,1,K); R(dir>0?hx+2:hx+1,ry-6,1,1,'#ffd23d');
@@ -641,11 +731,13 @@ function draw(){
   all.sort((p,q)=>p.y-q.y);
   if(playing&&goal){const pu=1+Math.sin(t*8), m=dest||goal; ctx.strokeStyle=COLORS[me.c]; ctx.lineWidth=.6; ctx.strokeRect(m.x-2-pu,m.y-2-pu,4+pu*2,4+pu*2)}
   all.forEach(p=>character(p,p===me)); all.forEach(p=>label(p,p===me));
+  if(P.kind==='forest')for(let k=0;k<14;k++){ const h=hash('ff'+k), fx=20+h%440+Math.sin(t*.5+k)*14, fy=60+(h>>9)%240+Math.cos(t*.4+k*1.3)*10, tw=Math.sin(t*2+k*2.3);     // lucioles
+    if(tw>-.2){ ctx.globalAlpha=.35+tw*.5; R(Math.round(fx),Math.round(fy),1,1,'#f4ff9a'); ctx.globalAlpha=(.35+tw*.5)*.3; R(Math.round(fx)-1,Math.round(fy)-1,3,3,'#f4ff9a'); ctx.globalAlpha=1 } }
   // petites étoiles sur le décor interactif
   THINGS.forEach((o,k)=>{ if(!o.secret&&Math.sin(t*3+k*2.1)>.1){ R(o.sx,o.sy-1,1,3,P.D); R(o.sx-1,o.sy,3,1,P.D) } });
   // invite "E" : place assise ou objet à portée
   if(playing&&me.seat<0&&!overlayOpen()){ const o=nearThing(), i=o?-1:nearSeat(); let px=0,py=0,txt='';
-    if(o){ px=o.px; py=o.py+Math.sin(t*5)*1.2; txt=o.label }
+    if(o){ px=o.px; py=o.py+Math.sin(t*5)*1.2; txt=o.id==='arcade'&&P.kind==='forest'?'tirer une carte':o.label }
     else if(i>=0){ const s=SEATS[i], near=Math.hypot(s.x-me.x,s.y-me.y)<10; px=s.x; py=s.y-(near?46:18)+Math.sin(t*5)*1.2 }
     if(o||i>=0){ glow(P.D,5); R(px-5,py-5,10,10,P.D); noGlow(); R(px-4,py-4,8,8,P.bubble); ctx.font='6px "Press Start 2P",monospace'; ctx.textAlign='center'; ctx.fillStyle=P.D; ctx.fillText('E',px+.5,py+3);
       if(txt){ ctx.font='8px "VT323",monospace'; const w=Math.ceil(ctx.measureText(txt).width)+6; ctx.globalAlpha=.9; R(px-w/2,py+7,w,8,P.bubble); ctx.globalAlpha=1; ctx.fillStyle=P.D; ctx.fillText(txt,px,py+13.5) } } }
@@ -750,7 +842,7 @@ function refreshList(){
   $('count').textContent=all.length;
 }
 function setTheme(t){ theme=t; P=PAL[t]; document.documentElement.dataset.theme=t; store.set('theme',t); renderBG();
-  for(const b of [$('themeBtn'),$('themeLogin')])b.textContent={dark:'☾',light:'☀',space:'🚀',fantasy:'🏰'}[t] }
+  for(const b of [$('themeBtn'),$('themeLogin')])b.textContent={dark:'☾',light:'☀',forest:'🌲',space:'🚀',fantasy:'🏰'}[t] }
 $('themeBtn').onclick=$('themeLogin').onclick=()=>{ const l=themeList(); setTheme(l[(l.indexOf(theme)+1)%l.length]) };
 
 const KEYMAP={KeyW:'up',ArrowUp:'up',KeyS:'down',ArrowDown:'down',KeyA:'left',ArrowLeft:'left',KeyD:'right',ArrowRight:'right'}; // e.code = position physique → ZQSD en AZERTY
@@ -817,7 +909,7 @@ $('bell').onclick=()=>{ setSound(!soundOn); if(soundOn)sfx.pop() }; setSound(sou
 // Deux façons de les débloquer : taper le code dans le chat, ou trouver le « ? » caché dans la pièce.
 const SECRETS={ space:{code:'/orbite',icon:'🚀',name:'Station orbitale',look:'l’Astronaute et le Petit alien'}, fantasy:{code:'/guilde',icon:'🏰',name:'Guilde des aventuriers',look:'le Mage et le Chevalier'} };
 const unlocked=k=>store.get('unlock_'+k)==='1';
-const themeList=()=>['dark','light',...Object.keys(SECRETS).filter(unlocked)];
+const themeList=()=>['dark','light','forest',...Object.keys(SECRETS).filter(unlocked)];
 const lookFree=i=>!!LOOKS[i]&&(!LOOKS[i].secret||unlocked(LOOKS[i].secret));
 function unlock(k){ const sc=SECRETS[k], first=!unlocked(k); store.set('unlock_'+k,'1'); refreshLooks(); setTheme(k); sfx.coffee();
   toast(first?'✨ Thème secret débloqué : '+sc.name+' ! Nouveaux personnages à l’écran de connexion : '+sc.look+'.':sc.icon+' '+sc.name) }
@@ -825,8 +917,8 @@ function secret(v){ const k=Object.keys(SECRETS).find(k=>SECRETS[k].code===v.toL
 function refreshLooks(){ [...$('looks').children].forEach((b,i)=>{ b.hidden=!lookFree(i) }) }
 
 /* ---------- décor utile : machine à café, tableau de tickets, borne d'arcade ---------- */
-const overlayOpen=()=>!$('arcadeDlg').hidden||!$('boardDlg').hidden;
-function overlayKey(e){ if(e.key==='Escape'){ closeArcade(); $('boardDlg').hidden=true } else if(!$('arcadeDlg').hidden)gameKey(e) }
+const overlayOpen=()=>!$('arcadeDlg').hidden||!$('boardDlg').hidden||!$('tarotDlg').hidden;
+function overlayKey(e){ if(e.key==='Escape'){ closeArcade(); $('boardDlg').hidden=true; $('tarotDlg').hidden=true } else if(!$('arcadeDlg').hidden)gameKey(e) }
 function nearThing(){ let best=null,bd=14; for(const o of THINGS){ const d=Math.hypot(o.x-me.x,o.y-me.y); if(d<bd){bd=d;best=o} } return best }
 // gesture = vrai si l'appel vient directement d'un clic ou d'une touche (nécessaire pour ouvrir un onglet).
 function useThing(o,gesture){
@@ -834,7 +926,7 @@ function useThing(o,gesture){
     if(me.st!==1){ me.st=1; setEmote(me,1); emit({t:'e',e:1,k:myId+'e'+Date.now()}); sfx.coffee(); toast('☕ Pause café. Reviens à la machine ou assieds-toi à un bureau pour reprendre.') }
     else { me.st=0; toast('Fin de la pause, au boulot !') }
     sendState(); refreshList();
-  } else if(o.id==='arcade') openArcade();
+  } else if(o.id==='arcade') P.kind==='forest'?openTarot():openArcade();
   else if(o.secret) unlock(o.secret);
   else { const url=boardUrl(); if(!url)openBoardDlg(); else if(gesture)openBoard(url); else toast('Tableau de tickets','Ouvrir',()=>openBoard(url)) }
 }
@@ -845,6 +937,31 @@ $('boardDlg').addEventListener('submit',e=>{ e.preventDefault(); let u=null; try
   if(!u||!/^https?:$/.test(u.protocol)){ toast('Lien invalide : il doit commencer par https://'); return }
   store.set('board',u.href); $('boardDlg').hidden=true; openBoard(u.href) });
 $('boardCancel').onclick=()=>{ $('boardDlg').hidden=true };
+
+// Thème forêt : la borne devient une table de tarot, avec des cartes maison pour développeurs.
+const TAROT=[
+ ['🐛','Le Bug','Il se cache là où tu es certain d’avoir déjà regardé.'],
+ ['🔀','Le Merge','Une fusion se prépare. Relis avant d’appuyer.'],
+ ['🚀','La Mise en prod','Le moment est favorable… sauf si on est vendredi.'],
+ ['☕','Le Café','Une pause t’apportera la solution que l’écran te refuse.'],
+ ['👀','La Review','Un regard extérieur éclairera ton chemin.'],
+ ['🧹','Le Refacto','Ce que tu ranges aujourd’hui te remerciera demain.'],
+ ['🧪','Le Test','Ce qui n’est pas vérifié reviendra te hanter.'],
+ ['📜','La Doc','La réponse existe déjà : quelqu’un l’a écrite.'],
+ ['🦆','Le Canard','Explique ton problème à voix haute : la réponse est en toi.'],
+ ['⏳','La Deadline','Le temps presse, mais la précipitation coûte double.'],
+ ['🌱','La Nouvelle branche','Un nouveau départ s’offre à toi. Nomme-le bien.'],
+ ['🔥','L’Incident','Garde ton calme : chaque feu éteint rend l’équipe plus forte.'],
+ ['🤝','Le Binôme','À deux, le chemin est plus court.'],
+ ['💾','La Sauvegarde','Commit maintenant, tu te remercieras plus tard.']
+];
+let tarotLast=-1;
+function drawTarot(share){ let i; do{ i=Math.random()*TAROT.length|0 }while(i===tarotLast); tarotLast=i; const [ic,nm,tx]=TAROT[i];
+  $('tarotIcon').textContent=ic; $('tarotName').textContent=nm.toUpperCase(); $('tarotText').textContent=tx;
+  const c=$('tarotCard'); c.classList.remove('flip'); void c.offsetWidth; c.classList.add('flip'); sfx.coffee(); if(share)say('🔮 J’ai tiré : '+nm) }
+function openTarot(){ $('tarotDlg').hidden=false; keys.clear(); goal=null; path=[]; drawTarot(true) }
+$('tarotAgain').onclick=()=>drawTarot(false);
+$('tarotClose').onclick=()=>{ $('tarotDlg').hidden=true };
 
 // Mini-jeu de la borne : Snake.
 const GW=20, GH=14, CELL=12; let snake=[], sdir=[1,0], ndir=[1,0], food=[0,0], score=0, over=true, ready=false, gtimer=null;
@@ -898,7 +1015,7 @@ $('card').addEventListener('submit',e=>{
   connect(); refreshList(); sendState(); showHelp(true,true);
   try{ if(window.Notification&&Notification.permission==='default')Notification.requestPermission() }catch(err){}
 });
-$('quit').onclick=()=>{ closeArcade(); $('boardDlg').hidden=true; me.st=0; disconnect(); playing=false; keys.clear(); goal=null; document.body.classList.remove('playing'); $('name').focus() };
+$('quit').onclick=()=>{ closeArcade(); $('boardDlg').hidden=true; $('tarotDlg').hidden=true; me.st=0; disconnect(); playing=false; keys.clear(); goal=null; document.body.classList.remove('playing'); $('name').focus() };
 
 addEventListener('resize',resize);
 { const t0=store.get('theme'); setTheme(themeList().includes(t0)?t0:'dark') } resize(); refreshNet();
